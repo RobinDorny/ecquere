@@ -3,69 +3,21 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Ecqare Begeleidingsapp</title>
+<title>Ecqare Clone met Taken en Activiteiten</title>
 <style>
-  body {
-    font-family: sans-serif;
-    margin: 0;
-    padding: 0;
-    background: #f5f7fa;
-    color: #222;
-    min-height: 100vh;
-  }
-  header {
-    background: #2c3e50;
-    color: white;
-    padding: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  #clientBar {
-    background: white;
-    padding: 10px;
-    display: flex;
-    overflow-x: auto;
-    gap: 10px;
-  }
-  #clientBar button {
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    background: #ecf0f1;
-    cursor: pointer;
-  }
-  #clientBar button.selected {
-    background: #3498db;
-    color: white;
-  }
-  main {
-    padding: 20px;
-  }
-  section {
-    margin-bottom: 30px;
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  textarea, input[type=text] {
-    width: 100%;
-    padding: 8px;
-    margin-top: 8px;
-    margin-bottom: 8px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-  }
-  button {
-    cursor: pointer;
-  }
-  ul {
-    padding-left: 20px;
-  }
-  li {
-    margin-bottom: 6px;
-  }
+  body { font-family: sans-serif; margin:0; padding:0; background:#f5f7fa; }
+  header { background:#2c3e50; color:#fff; padding:15px; display:flex; justify-content:space-between; align-items:center; }
+  #clientBar { background:#fff; padding:10px; display:flex; overflow-x:auto; gap:10px; }
+  #clientBar button { padding:10px; border:none; border-radius:5px; background:#ecf0f1; cursor:pointer; }
+  #clientBar button.selected { background:#3498db; color:#fff; }
+  main { padding:20px; display:flex; gap:20px; flex-wrap: wrap; }
+  section { background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1); flex:1 1 300px; min-width:300px; max-width: 600px; }
+  h3 { margin-top:0; }
+  ul { list-style:none; padding-left:0; }
+  li { margin-bottom:8px; }
+  input[type=text] { width: 100%; padding:8px; margin-top:8px; margin-bottom:8px; border-radius:4px; border:1px solid #ccc; }
+  button { cursor:pointer; background:#3498db; color:#fff; border:none; padding:8px 12px; border-radius:4px; }
+  button:hover { background:#2980b9; }
 </style>
 </head>
 <body>
@@ -74,23 +26,10 @@
 <script>
   let userLoggedIn = localStorage.getItem('loggedIn') === 'true';
   let clients = JSON.parse(localStorage.getItem('clients') || '[]');
-  let selectedClient = Number(localStorage.getItem('selectedClient') || 0);
-
-  // Zorg altijd minimaal 1 cliënt
-  if(userLoggedIn && clients.length === 0) {
-    clients.push({ name: 'Cliënt 1', diary: '', notes: '', medication: [], tasks: [], activities: [] });
-    saveClients();
-  }
-
-  // Validatie selectedClient
-  if(selectedClient < 0 || selectedClient >= clients.length) selectedClient = 0;
+  let selectedClient = 0;
 
   function saveClients() {
     localStorage.setItem('clients', JSON.stringify(clients));
-  }
-
-  function saveSelectedClient() {
-    localStorage.setItem('selectedClient', selectedClient);
   }
 
   function renderLogin() {
@@ -108,7 +47,8 @@
     if (pwd === 'zorg') {
       localStorage.setItem('loggedIn', 'true');
       userLoggedIn = true;
-      if(clients.length === 0) {
+      if (clients.length === 0) {
+        // Voeg standaardclient toe
         clients.push({ name: 'Cliënt 1', diary: '', notes: '', medication: [], tasks: [], activities: [] });
         saveClients();
       }
@@ -125,19 +65,7 @@
 
   function renderApp() {
     const app = document.getElementById('app');
-
-    if(clients.length === 0) {
-      app.innerHTML = `
-        <main style="max-width:400px;margin:100px auto;text-align:center">
-          <p>Geen cliënten beschikbaar.</p>
-          <button onclick="addClient()">Nieuwe cliënt toevoegen</button>
-          <button onclick="logout()">Uitloggen</button>
-        </main>
-      `;
-      return;
-    }
-
-    const client = clients[selectedClient] || { name: 'Onbekend', diary: '', notes: '', medication: [], tasks: [], activities: [] };
+    const client = clients[selectedClient];
 
     app.innerHTML = `
       <header>
@@ -152,69 +80,61 @@
         <section>
           <h3>Dossier: ${client.name}</h3>
           <p><strong>Notities:</strong><br>${client.notes || 'Geen notities'}</p>
+          <h4>Begeleidersdagboek</h4>
+          <textarea id="diaryText" style="width:100%; height:100px;">${client.diary || ''}</textarea>
+          <button onclick="saveDiary()">Opslaan dagboek</button>
         </section>
-        <section>
-          <h3>Begeleidersdagboek</h3>
-          <textarea id="diaryText">${client.diary || ''}</textarea>
-          <button onclick="saveDiary()">Opslaan</button>
-        </section>
+
         <section>
           <h3>Medicatieplan</h3>
           <ul id="medList">
-            ${(client.medication || []).map((m, i) => `
-              <li>
-                <label>
-                  <input type="checkbox" ${m.done ? 'checked' : ''} onchange="toggleMed(${i})"> ${m.name}
-                </label>
-              </li>`).join('')}
+            ${(client.medication || []).map((m, i) => `<li><input type="checkbox" ${m.done ? 'checked' : ''} onchange="toggleMed(${i})"> ${m.name}</li>`).join('')}
           </ul>
           <input type="text" id="newMed" placeholder="Medicatie toevoegen" />
           <button onclick="addMed()">Toevoegen</button>
         </section>
+
         <section>
           <h3>Taken</h3>
           <ul id="taskList">
             ${(client.tasks || []).map((t, i) => `
               <li>
-                <label>
-                  <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask(${i})"> ${t.name}
-                </label>
-              </li>`).join('')}
+                <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask(${i})" /> ${t.name}
+              </li>
+            `).join('')}
           </ul>
           <input type="text" id="newTask" placeholder="Taak toevoegen" />
           <button onclick="addTask()">Toevoegen</button>
         </section>
+
         <section>
           <h3>Activiteiten</h3>
           <ul id="activityList">
             ${(client.activities || []).map((a, i) => `
               <li>
-                <label>
-                  <input type="checkbox" ${a.done ? 'checked' : ''} onchange="toggleActivity(${i})"> ${a.name}
-                </label>
-              </li>`).join('')}
+                <input type="checkbox" ${a.done ? 'checked' : ''} onchange="toggleActivity(${i})" /> ${a.name}
+              </li>
+            `).join('')}
           </ul>
           <input type="text" id="newActivity" placeholder="Activiteit toevoegen" />
           <button onclick="addActivity()">Toevoegen</button>
         </section>
+
       </main>
     `;
   }
 
   function selectClient(index) {
-    if(index < 0 || index >= clients.length) return;
     selectedClient = index;
-    saveSelectedClient();
     renderApp();
   }
 
   function addClient() {
     const name = prompt('Naam van cliënt?');
-    if (name && name.trim() !== '') {
-      clients.push({ name: name.trim(), diary: '', notes: '', medication: [], tasks: [], activities: [] });
-      selectedClient = clients.length - 1;
+    if (name) {
+      clients.push({ name, diary: '', notes: '', medication: [], tasks: [], activities: [] });
+      selectedClient = clients.length -1;
       saveClients();
-      saveSelectedClient();
       renderApp();
     }
   }
@@ -222,64 +142,61 @@
   function saveDiary() {
     const text = document.getElementById('diaryText').value;
     clients[selectedClient].diary = text;
-    clients[selectedClient].notes = text; // koppeling notities
+    clients[selectedClient].notes = text; // dagboek ook tonen bij notities
     saveClients();
     alert('Dagboek opgeslagen');
     renderApp();
   }
 
-  function toggleMed(i) {
-    if(clients[selectedClient] && clients[selectedClient].medication[i]) {
-      clients[selectedClient].medication[i].done = !clients[selectedClient].medication[i].done;
-      saveClients();
-      renderApp();
-    }
+  function toggleMed(index) {
+    clients[selectedClient].medication[index].done = !clients[selectedClient].medication[index].done;
+    saveClients();
   }
 
   function addMed() {
     const val = document.getElementById('newMed').value.trim();
-    if (!val) return;
+    if (!val) return alert('Vul medicatie naam in');
     clients[selectedClient].medication.push({ name: val, done: false });
     saveClients();
     renderApp();
   }
 
-  function toggleTask(i) {
-    if(clients[selectedClient] && clients[selectedClient].tasks[i]) {
-      clients[selectedClient].tasks[i].done = !clients[selectedClient].tasks[i].done;
-      saveClients();
-      renderApp();
-    }
+  function toggleTask(index) {
+    clients[selectedClient].tasks[index].done = !clients[selectedClient].tasks[index].done;
+    saveClients();
+    renderApp();
   }
 
   function addTask() {
     const val = document.getElementById('newTask').value.trim();
-    if(!val) return;
+    if (!val) return alert('Vul taak in');
     clients[selectedClient].tasks.push({ name: val, done: false });
     saveClients();
     renderApp();
   }
 
-  function toggleActivity(i) {
-    if(clients[selectedClient] && clients[selectedClient].activities[i]) {
-      clients[selectedClient].activities[i].done = !clients[selectedClient].activities[i].done;
-      saveClients();
-      renderApp();
-    }
+  function toggleActivity(index) {
+    clients[selectedClient].activities[index].done = !clients[selectedClient].activities[index].done;
+    saveClients();
+    renderApp();
   }
 
   function addActivity() {
     const val = document.getElementById('newActivity').value.trim();
-    if(!val) return;
+    if (!val) return alert('Vul activiteit in');
     clients[selectedClient].activities.push({ name: val, done: false });
     saveClients();
     renderApp();
   }
 
-  // Start app
-  if(!userLoggedIn) {
+  // Init
+  if (!userLoggedIn) {
     renderLogin();
   } else {
+    if(clients.length === 0) {
+      clients.push({ name: 'Cliënt 1', diary: '', notes: '', medication: [], tasks: [], activities: [] });
+      saveClients();
+    }
     renderApp();
   }
 </script>
