@@ -149,3 +149,86 @@
 </script>
 </body>
 </html>
+<section>
+  <h3>Dagelijkse Taken</h3>
+  <ul id="taskList"></ul>
+  <input type="text" id="newTask" placeholder="Nieuwe taak toevoegen" />
+  <button onclick="addTask()">Toevoegen</button>
+</section>
+
+<script>
+  let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+
+  function renderTasks() {
+    const list = document.getElementById('taskList');
+    list.innerHTML = tasks
+      .map((task, i) => `
+        <li>
+          <input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleTask(${i})" />
+          ${task.text}
+        </li>
+      `)
+      .join('');
+  }
+
+  function addTask() {
+    const val = document.getElementById('newTask').value.trim();
+    if (!val) return;
+    tasks.push({ text: val, done: false });
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    document.getElementById('newTask').value = '';
+    renderTasks();
+  }
+
+  function toggleTask(index) {
+    tasks[index].done = !tasks[index].done;
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    renderTasks();
+  }
+
+  // Bij laden van de pagina
+  renderTasks();
+</script>
+<section>
+  <h3>Agenda</h3>
+  <input type="date" id="agendaDate" />
+  <input type="text" id="agendaText" placeholder="Afspraken / Activiteit" />
+  <button onclick="addAgendaItem()">Toevoegen</button>
+  <ul id="agendaList"></ul>
+</section>
+
+<script>
+  let agenda = JSON.parse(localStorage.getItem('agenda') || '{}');
+
+  function addAgendaItem() {
+    const date = document.getElementById('agendaDate').value;
+    const text = document.getElementById('agendaText').value.trim();
+    if (!date || !text) return;
+
+    if (!agenda[date]) {
+      agenda[date] = [];
+    }
+    agenda[date].push(text);
+
+    localStorage.setItem('agenda', JSON.stringify(agenda));
+    document.getElementById('agendaText').value = '';
+    renderAgenda();
+  }
+
+  function renderAgenda() {
+    const list = document.getElementById('agendaList');
+    list.innerHTML = Object.entries(agenda)
+      .sort()
+      .map(([date, items]) => `
+        <li>
+          <strong>${date}</strong>
+          <ul>
+            ${items.map(item => `<li>${item}</li>`).join('')}
+          </ul>
+        </li>
+      `)
+      .join('');
+  }
+
+  renderAgenda();
+</script>
