@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ecqare Begeleidingsapp</title>
+<style>
+  body { font-family: sans-serif; margin: 0; padding: 0; background: #f5f7fa; }
+  header { background: #2c3e50; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+  #clientBar { background: white; padding: 10px; display: flex; overflow-x: auto; gap: 10px; }
+  #clientBar button { padding: 10px; border: none; border-radius: 5px; background: #ecf0f1; cursor: pointer; }
+  #clientBar button.selected { background: #3498db; color: white; }
+  main { padding: 20px; }
+  section { margin-bottom: 30px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  textarea, input[type=text] { width: 100%; padding: 8px; margin-top: 8px; margin-bottom: 8px; border-radius: 4px; border: 1px solid #ccc; }
+  button { cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+  let userLoggedIn = localStorage.getItem('loggedIn') === 'true';
+  let clients = JSON.parse(localStorage.getItem('clients') || '[]');
+  let selectedClient = 0;
+
+  // Ensure at least one client exists to prevent undefined errors
+  if (clients.length === 0) {
+    clients.push({ name: 'Cliënt 1', diary: '', notes: '', medication: [] });
+    saveClients();
+  }
+
+  function saveClients() {
+    localStorage.setItem('clients', JSON.stringify(clients));
+  }
+
+  function renderLogin() {
+    document.getElementById('app').innerHTML = `
+      <main style="max-width:400px;margin:100px auto;text-align:center">
+        <h2>Inloggen</h2>
+        <input type="password" id="password" placeholder="Wachtwoord" />
+        <button onclick="login()">Login</button>
+      </main>
+    `;
+  }
+
+  function login() {
+    const pwd = document.getElementById('password').value;
+    if (pwd === 'zorg') {
+      localStorage.setItem('loggedIn', 'true');
+      userLoggedIn = true;
+      renderApp();
+    } else {
+      alert('Onjuist wachtwoord');
+    }
+  }
+
+  function logout() {
+    localStorage.setItem('loggedIn', 'false');
+    location.reload();
+  }
+
+  function renderApp() {
+    const app = document.getElementById('app');
+    const client = clients[selectedClient] || { name: 'Onbekend', diary: '', notes: '', medication: [] };
+
+    app.innerHTML = `
+      <header>
+        <div>Ecqare Begeleiding</div>
+        <button onclick="logout()">Uitloggen</button>
+      </header>
+      <div id="clientBar">
+        <button onclick="addClient()">+ Nieuwe Cliënt</button>
+        ${clients.map((c, i) => `<button class="${i === selectedClient ? 'selected' : ''}" onclick="selectClient(${i})">${c.name}</button>`).join('')}
+      </div>
+      <main>
+        <section>
+          <h3>Dossier: ${client.name}</h3>
+          <p><strong>Notities:</strong><br>${client.notes || 'Geen notities'}</p>
+        </section>
+        <section>
+          <h3>Begeleidersdagboek</h3>
+          <textarea id="diaryText">${client.diary || ''}</textarea>
+          <button onclick="saveDiary()">Opslaan</button>
+        </section>
+        <section>
+          <h3>Medicatieplan</h3>
+          <ul id="medList">
+            ${(client.medication || []).map((m, i) => `<li><input type="checkbox" ${m.done ? 'checked' : ''} onchange="toggleMed(${i})"> ${m.name}</li>`).join('')}
+          </ul>
+          <input type="text" id="newMed" placeholder="Medicatie toevoegen" />
+          <button onclick="addMed()">Toevoegen</button>
+        </section>
+      </main>
+    `;
+  }
+
+  function selectClient(index) {
+    if (index >= 0 && index < clients.length) {
+      selectedClient = index;
+      renderApp();
+    }
+  }
+
+  function addClient() {
+    const name = prompt('Naam van cliënt?');
+    if (name) {
+      clients.push({ name, diary: '', notes: '', medication: [] });
+      selectedClient = clients.length - 1;
+      saveClients();
+      renderApp();
+    }
+  }
+
+  function saveDiary() {
+    if (clients[selectedClient]) {
+      const text = document.getElementById('diaryText').value;
+      clients[selectedClient].diary = text;
+      clients[selectedClient].notes = text; // Koppeling met notities
+      saveClients();
+      alert('Dagboek opgeslagen');
+      renderApp();
+    }
+  }
+
+  function toggleMed(index) {
+    if (clients[selectedClient] && clients[selectedClient].medication[index]) {
+      clients[selectedClient].medication[index].done = !clients[selectedClient].medication[index].done;
+      saveClients();
+    }
+  }
+
+  function addMed() {
+    const val = document.getElementById('newMed').value.trim();
+    if (!val) return;
+    if (clients[selectedClient]) {
+      clients[selectedClient].medication.push({ name: val, done: false });
+      saveClients();
+      renderApp();
+    }
+  }
+
+  // Init
+  if (!userLoggedIn) {
+    renderLogin();
+  } else {
+    renderApp();
+  }
+</script>
+</body>
+</html>
